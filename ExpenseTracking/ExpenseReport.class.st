@@ -3,7 +3,8 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'header',
-		'expenses'
+		'expenses',
+		'budget'
 	],
 	#category : #ExpenseTracking
 }
@@ -150,92 +151,6 @@ ExpenseReport >> gtViewBarChartOn: aView [
  				with: data ]
 ]
 
-{ #category : #accessing }
-ExpenseReport >> gtViewBurnUpChartOn: aView [
-	<gtView>
-	| data font sum |
-	
-	data := OrderedCollection new.
-	sum := 0.
-	self groupByDate do: [:each | 
-		data add: each expenses first date -> (each sum + sum).
-		sum := sum + each sum.
-	].
-				
-	^ aView explicit
-		title: 'Burnup';
-		priority: 1;
-		stencil: [
-			| canvas axis width height prior xmin xmax ymax x0 y0 |
-			x0 := 20.
-			y0 := 20.
-			width := 600 - x0.
-			height := 500 - y0.
-			
-			xmin := (data detectMin: #key) key asSeconds.
-			xmax := (data detectMax: #key) key asSeconds.	
-			ymax := data max: #value.		
-			
-			canvas := SkiaCanvas extent: (width + (2*x0))@(height+(2*y0)).
-					
-			canvas fill
-				path: (0@0 extent: 620@520);
-				paint: ((Color fromHexString: '#FCFCFC') alpha: 0.06);
-				draw.	
-		
-"			font := canvas font
-				size: 12;
-				weightThin;
-				build.				
-			canvas text
-				paint: (Color black alpha: 0.5);
-				string: 'Date';
-				font: font;
-				draw."										
-					
-			axis := canvas path
-				moveTo: x0@height;
-				lineTo: width@height;
-				moveTo: x0@y0;
-				lineTo: x0@height;				
-				close;
-				finish.
-				
-			canvas stroke
-				path: axis;
-				paint: (Color fromHexString: '#606060');
-				width: 2;
-				draw.
-								
-			data do: [:each |
-				| x y |
-						
-				x := (each key asSeconds - xmin * (width - x0) / (xmax - xmin)) asFloat + x0.
-				y := (height - (each value * (height - y0) / ymax)) asFloat.
-				
-				prior ifNotNil: 
-					[ canvas stroke
-						path: (canvas path moveTo: prior; lineTo: x@y; finish);
-						paint: ((Color fromHexString: '#45ABFE') alpha: 0.5);
-						width: 2;
-						draw ].
-			
-				canvas fill
-					path: (canvas shape circleAt: x @ y radius: 3);
-					paint: ((Color fromHexString: '#45ABFE') alpha: 0.5);
-					draw.
-																	
-				prior := x@y.
-								
-			].	
-				
-
-		canvas flush.					
-		canvas asForm asElement.				
-		
-		]	
-]
-
 { #category : #inspect }
 ExpenseReport >> gtViewListOn: aView [
 	<gtView>
@@ -257,6 +172,29 @@ ExpenseReport >> gtViewTableOn: aView [
 		forCollectionOfCollection
 		
 	
+]
+
+{ #category : #accessing }
+ExpenseReport >> gtViewTimelineOn: aView [
+	<gtView>
+	| data sum |
+	^ aView explicit
+		title: 'Timeline';
+		priority: 1;
+		stencil: [
+			data := OrderedCollection new.
+			sum := 0.
+			self groupByDate do: [:each | 
+				data add: each expenses first date -> (each sum + sum).
+				sum := sum + each sum.
+			].
+			ExpensePlot new
+				data: data;
+				x: [:each | each key asSeconds];
+				y: #value;
+				budget: budget;
+				plot
+		]
 ]
 
 { #category : #inspect }
@@ -283,6 +221,12 @@ ExpenseReport >> gtViewTreeOn: aView [
 				ifTrue: [each expenses]
 				ifFalse: [#()] ].
 				
+]
+
+{ #category : #accessing }
+ExpenseReport >> initialize [
+	super initialize.
+	budget := 300000.
 ]
 
 { #category : #filtering }
