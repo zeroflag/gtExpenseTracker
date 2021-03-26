@@ -89,7 +89,7 @@ ExpensePlot >> drawAxis [
 
 	font := canvas font size: 10; weightNormal; build.
 		
-	0 to: budget by: yTick do: [:i |
+	0 to: ymax by: yTick do: [:i |
 		| tick |
 		tick := canvas path
 			moveTo: (x0-3)@(self translateY: i);
@@ -162,7 +162,7 @@ ExpensePlot >> drawLabels [
 									
 	budgetLabel := canvas text
 		paint: axisColor;
-		string: ('Spent {1} out of {2}' format: {ys last . budget});
+		string: ('Spent {1} out of {2}' format: {ys last . budget ifNil: ['N/A']});
 		font: font.
 	budgetMetrics := budgetLabel measure.
 	budgetLabel
@@ -211,6 +211,8 @@ ExpensePlot >> initialize [
 
 { #category : #plot }
 ExpensePlot >> plot [
+	data ifEmpty: [ ^ (SkiaCanvas extent:0@0) asForm ].
+	
 	width := totalWidth - x0.
 	height := totalHeight - y0.
 	

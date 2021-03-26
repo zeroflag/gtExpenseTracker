@@ -56,6 +56,11 @@ ExpenseReport >> asTable [
 ]
 
 { #category : #accessing }
+ExpenseReport >> budget: aNumber [
+	budget := aNumber
+]
+
+{ #category : #accessing }
 ExpenseReport >> expenses [
 	^ expenses
 ]
@@ -65,6 +70,11 @@ ExpenseReport >> filter: aBloc [
 	^ ExpenseReport new 			
 		setHeader: header 
 		expenses: (expenses select: aBloc)
+]
+
+{ #category : #accessing }
+ExpenseReport >> firstMonth [
+	^ expenses first date monthIndex	
 ]
 
 { #category : #grouping }
@@ -85,7 +95,7 @@ ExpenseReport >> groupByTag [
 
 { #category : #inspect }
 ExpenseReport >> gtViewAddExpenseOn: aView [
-	<gtView>
+"	<gtView>"
 	| container tagDropDown |
 	^ aView explicit 
 		title: 'New expense';
@@ -137,6 +147,7 @@ ExpenseReport >> gtViewBarChartOn: aView [
 	<gtView>
 	^ aView explicit
 		title: 'Bar chart';
+		priority: 4;
 		stencil: [
 		    | data reports |
 		    reports := self groupByTag.
@@ -156,17 +167,31 @@ ExpenseReport >> gtViewListOn: aView [
 	<gtView>
 	^ aView columnedList
 		title: 'List';
-		priority: 5;
+		priority: 1;
 		items: [self expenses];
 		column: 'Date' text: #date;
 		column: 'Tag' text: #tag;
 		column: 'Cost' text: #cost.
+
+]
+
+{ #category : #inspect }
+ExpenseReport >> gtViewMonthsOn: aView [
+	<gtView>
+	^ self firstMonth = self lastMonth
+		ifTrue: [ aView empty ]
+		ifFalse: [ 
+			aView list
+				priority: 6;
+				title: 'Monthly';
+				items: [ (1 to: self lastMonth) collect: [:i | self month: i] ]].
 ]
 
 { #category : #inspect }
 ExpenseReport >> gtViewTableOn: aView [
 	<gtView>
 	^ aView table
+		priority: 5;
 		title: 'Table';
 		items:  self asTable;
 		forCollectionOfCollection
@@ -174,13 +199,13 @@ ExpenseReport >> gtViewTableOn: aView [
 	
 ]
 
-{ #category : #accessing }
+{ #category : #inspect }
 ExpenseReport >> gtViewTimelineOn: aView [
 	<gtView>
 	| data sum |
 	^ aView explicit
 		title: 'Timeline';
-		priority: 1;
+		priority: 3;
 		stencil: [
 			data := OrderedCollection new.
 			sum := 0.
@@ -194,13 +219,14 @@ ExpenseReport >> gtViewTimelineOn: aView [
 				y: #value;
 				budget: budget;
 				plot
-		]
+		].
 ]
 
 { #category : #inspect }
 ExpenseReport >> gtViewTreeOn: aView [
 	<gtView>
 	^ aView columnedTree
+		priority: 2;
 		title: 'Tree';
 		items: [ self groupByTag ];
 		column: 'Tag' item: [:each | 
@@ -226,12 +252,30 @@ ExpenseReport >> gtViewTreeOn: aView [
 { #category : #accessing }
 ExpenseReport >> initialize [
 	super initialize.
-	budget := 300000.
+]
+
+{ #category : #accessing }
+ExpenseReport >> lastMonth [
+	^ expenses last date monthIndex
 ]
 
 { #category : #filtering }
 ExpenseReport >> month: aNumber [
-	^ self year: (Date today year) month: aNumber
+	^ self year: (Date today year) month: aNumber.
+]
+
+{ #category : #accessing }
+ExpenseReport >> printOn: aStream [
+	| start stop |
+	start := expenses first date month name.
+	stop := expenses last date month name.
+	start = stop 
+		ifTrue: [ aStream nextPutAll: start ]
+		ifFalse: [ aStream nextPutAll: start, '-', stop ].
+	aStream 
+		nextPutAll: ': ';
+		nextPutAll: self sum asString. 
+	
 ]
 
 { #category : #initalize }
@@ -267,6 +311,9 @@ ExpenseReport >> timeSpan [
 
 { #category : #filtering }
 ExpenseReport >> year: aNumber1 month: aNumber2 [
-	^ self filter: [:each | each date year = aNumber1 and: [each date month index = aNumber2]]
+	| report |
+	report := self filter: [:each | each date year = aNumber1 and: [each date month index = aNumber2]].
+	report budget: 300000.
+	^ report
 
 ]
