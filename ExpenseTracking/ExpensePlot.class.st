@@ -49,13 +49,12 @@ ExpensePlot >> budget: aNumber [
 
 { #category : #private }
 ExpensePlot >> connect: point1 to: point2 [
-	point1 ifNotNil: [ 
-		canvas stroke
-			path: (canvas path moveTo: point1; lineTo: point2; finish);
-			paint: lineColor;
-			width: 2;
-			draw.
-	]. 
+	canvas stroke
+		path: (canvas path moveTo: point1; lineTo: point2; finish);
+		paint: lineColor;
+		width: 2;
+		draw.
+
 ]
 
 { #category : #accessing }
@@ -188,7 +187,7 @@ ExpensePlot >> drawPoints [
 		| x y |
 		x := self translateX: (xs at: i).
 		y := self translateY: (ys at: i).
-		self connect: prior to: x@y.
+		prior ifNotNil: [ self connect: prior to: x@y ].
 		self dot: x@y.
 		prior := x@y.
 	].

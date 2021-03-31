@@ -25,7 +25,7 @@ ExpenseReport class >> fromCsv: aString [
   			expenses add: (Expense
 				date: date
 				cost: each value asNumber
-				tag: (header at: index) value)
+				category: (header at: index) value)
   		].
  	 ].  
 	].
@@ -35,7 +35,7 @@ ExpenseReport class >> fromCsv: aString [
 { #category : #converting }
 ExpenseReport >> asTable [
 	| table queue tagToColumn tags |
-	tags := self tags.
+	tags := self categories.
 	header := OrderedCollection with: '' withAll: tags.
 	table := OrderedCollection with: header.
 	tagToColumn := Dictionary newFromKeys: tags andValues: (1 to: tags size).
@@ -47,7 +47,7 @@ ExpenseReport >> asTable [
 		row := Array new: tags size.
 		[queue notEmpty and: [queue first date = date]] whileTrue: 
 		[ row 
-				at: (tagToColumn at: queue first tag) 
+				at: (tagToColumn at: queue first category) 
 				put: queue first cost.
 			queue removeFirst. ].
 		table add: (OrderedCollection with: date withAll: row).
@@ -61,13 +61,28 @@ ExpenseReport >> budget: aNumber [
 ]
 
 { #category : #accessing }
+ExpenseReport >> categories [
+	| tags |
+	tags := expenses collect: #category.
+	tags removeDuplicates.
+	^ tags
+	
+]
+
+{ #category : #filtering }
+ExpenseReport >> category: aString [
+	^ self filter: [:each | each category = aString]
+	
+]
+
+{ #category : #accessing }
 ExpenseReport >> expenses [
 	^ expenses
 ]
 
 { #category : #filtering }
 ExpenseReport >> filter: aBloc [	
-	^ ExpenseReport new 			
+	^ self class new 			
 		setHeader: header 
 		expenses: (expenses select: aBloc)
 ]
@@ -78,54 +93,71 @@ ExpenseReport >> firstMonth [
 ]
 
 { #category : #grouping }
-ExpenseReport >> groupByDate [
-    ^ (expenses groupedBy: #date) values collect: [:each |
-		ExpenseReport new 			
-			setHeader: header 
-			expenses: each ].
+ExpenseReport >> groupByCategory [
+    ^ (expenses groupedBy: #category) values collect: [:each |
+		self class new setHeader: header expenses: each ].
 ]
 
 { #category : #grouping }
-ExpenseReport >> groupByTag [
-    ^ (expenses groupedBy: #tag) values collect: [:each |
-		ExpenseReport new 			
-			setHeader: header 
-			expenses: each ].
+ExpenseReport >> groupByDate [
+    ^ (expenses groupedBy: #date) values collect: [:each |
+		self class new	setHeader: header expenses: each ].
 ]
 
 { #category : #inspect }
 ExpenseReport >> gtViewAddExpenseOn: aView [
-"	<gtView>"
-	| container tagDropDown |
+	<gtView>
+	| tagDropDown costInput yearInput monthInput dayInput button tagList dropdownLook |
 	^ aView explicit 
-		title: 'New expense';
-		priority: 100;
-		actionButtonIcon: BrGlamorousVectorIcons accept 
-		tooltip: 'Save' 
-		action: [ :aToggle :aTab | ];	
+		title: '+';
+		priority: 7;
 		stencil: [	
-			| costInput button |
-			
 			costInput := BrEditor new
-				hMatchParent;
-				vFitContentLimited;
+				hExact: 60;
 				look: BrGlamorousRegularEditorLook;
 				text:'0'.
 			costInput selecter all; select.
 			
-"			
-			tagDropDown := BrButton new
-				label: 'Category';
-				look: BrGlamorousButtonWithLabelLook 
-					+ (BrGlamorousWithDropdownLook 
-							handle: [ 
-							
-
-							
-							 ];
-							content: [ header ]);
-				yourself."
+			yearInput := BrEditor new
+				hExact: 60;
+				look: BrGlamorousRegularEditorLook;
+				text: Date today year asString.
 			
+			monthInput := BrEditor new
+				hExact: 60;
+				look: BrGlamorousRegularEditorLook;
+				text: Date today month monthIndex asString.
+				
+			dayInput := BrEditor new
+				hExact: 60;
+				look: BrGlamorousRegularEditorLook;
+				text: Date today dayOfMonth asString.
+		
+			tagList := BrSimpleList new itemStencil: [
+        		BrLabel new
+            		hMatchParent;
+            		look: BrGlamorousLabelLook new;
+            		padding: (BlInsets all: 5) ];
+    				itemDataBinder: [ :eachElement :eachItem :eachIndex | eachElement text: eachItem ];
+    				items: header;
+    				addEventHandler: (GtPhlowListToSelectHandler new);
+    				lookDo: [ :aLook | 
+    					aLook listElement constraintsDo: [ :c | c maxHeight: 500 ] ];
+    				layout: BlLinearLayout vertical;
+    				padding: (BlInsets all: 5);
+    				vFitContent;
+    				hFitContent;
+    			yourself.
+	
+			dropdownLook := BrGlamorousWithDropdownLook handle: [ 
+						BrButton new look:  BrGlamorousButtonWithLabelAndIconLook - BrGlamorousButtonExteriorLook;
+							label: 'Category'; yourself.
+						] content: tagList.
+	
+			tagDropDown := BrButton new
+				hExact: 250;
+				label: 'Category';
+				look: BrGlamorousButtonWithLabelLook + dropdownLook.
 
 			button := BrButton new
 				look: BrGlamorousButtonWithIconLook;
@@ -134,11 +166,17 @@ ExpenseReport >> gtViewAddExpenseOn: aView [
 				disabled: costInput text isEmpty;
 				action: [ ].
 				
-			BrVerticalPane new
-				hExact: 400;
+			BrHorizontalPane new
 				vFitContentLimited;
-				padding: (BlInsets all: 10);
-				addChildren: { costInput  . button }
+				padding: (BlInsets all: 5);
+				addChildren: {  
+					yearInput. 
+					monthInput. 
+					dayInput. 
+					costInput.
+					tagDropDown.
+					button.
+				}.
 		].
 ]
 
@@ -146,13 +184,13 @@ ExpenseReport >> gtViewAddExpenseOn: aView [
 ExpenseReport >> gtViewBarChartOn: aView [
 	<gtView>
 	^ aView explicit
-		title: 'Bar chart';
+		title: 'BarChart';
 		priority: 4;
 		stencil: [
 		    | data reports |
-		    reports := self groupByTag.
+		    reports := self groupByCategory.
 			data := GtPlotterDataGroup new values:reports.
-			data := data labelled: [:each | each tags first, ' (', each sum asString, ')' ].
+			data := data labelled: [:each | each categories first, ' (', each sum asString, ')' ].
 			data := data colored: [:each | Color random alpha: 0.5 ].
 			GtPlotterHorizontalBarChart new
 				 barLabelWidth: 250;
@@ -170,7 +208,7 @@ ExpenseReport >> gtViewListOn: aView [
 		priority: 1;
 		items: [self expenses];
 		column: 'Date' text: #date;
-		column: 'Tag' text: #tag;
+		column: 'Category' text: #category;
 		column: 'Cost' text: #cost.
 
 ]
@@ -181,9 +219,11 @@ ExpenseReport >> gtViewMonthsOn: aView [
 	^ self firstMonth = self lastMonth
 		ifTrue: [ aView empty ]
 		ifFalse: [ 
-			aView list
+			aView columnedList
 				priority: 6;
-				title: 'Monthly';
+				title: 'Month';
+				column: 'Month' text: #firstMonth;
+				column: 'Sum' text: #sum;
 				items: [ (1 to: self lastMonth) collect: [:i | self month: i] ]].
 ]
 
@@ -211,15 +251,14 @@ ExpenseReport >> gtViewTimelineOn: aView [
 			sum := 0.
 			self groupByDate do: [:each | 
 				data add: each expenses first date -> (each sum + sum).
-				sum := sum + each sum.
-			].
+				sum := sum + each sum. ].
 			ExpensePlot new
 				data: data;
 				x: [:each | each key asSeconds];
 				y: #value;
 				budget: budget;
 				plot
-		].
+			].
 ]
 
 { #category : #inspect }
@@ -228,11 +267,11 @@ ExpenseReport >> gtViewTreeOn: aView [
 	^ aView columnedTree
 		priority: 2;
 		title: 'Tree';
-		items: [ self groupByTag ];
-		column: 'Tag' item: [:each | 
+		items: [ self groupByCategory ];
+		column: 'Category' item: [:each | 
 			(each isKindOf: ExpenseReport)
-				ifTrue: [each tags first]
-				ifFalse: ['' asRopedText]];
+				ifTrue: [ each categories first ]
+				ifFalse: ['' asRopedText] ];
 		column: 'Date' item: [:each | 
 			(each isKindOf: ExpenseReport)
 				ifTrue: ['' asRopedText]
@@ -240,7 +279,19 @@ ExpenseReport >> gtViewTreeOn: aView [
 		column: 'Cost' item: [:each | 
 			(each isKindOf: ExpenseReport)
 				ifTrue: ['' asRopedText]
-				ifFalse: [each cost]];			
+				ifFalse: [each cost]];	
+		column: 'Sum' item: [:each |
+			(each isKindOf: ExpenseReport)
+				ifTrue: [ each sum ]
+				ifFalse: ['' asRopedText]];
+		column: 'Count' item: [:each |
+			(each isKindOf: ExpenseReport)
+				ifTrue: [ each size ]
+				ifFalse: ['' asRopedText]];
+		column: 'Average' item: [:each |
+			(each isKindOf: ExpenseReport)
+				ifTrue: [ (each sum / each size) rounded ]
+				ifFalse: ['' asRopedText]];							
 		expandAll;
 		children: [ :each |
 			(each isKindOf: ExpenseReport)
@@ -285,23 +336,13 @@ ExpenseReport >> setHeader: aCollection1 expenses: aCollection2 [
 ]
 
 { #category : #accessing }
-ExpenseReport >> sum [
-	^ expenses sum: #cost
-]
-
-{ #category : #filtering }
-ExpenseReport >> tag: aString [
-	^ self filter: [:each | each tag = aString]
-	
+ExpenseReport >> size [
+	^ expenses size
 ]
 
 { #category : #accessing }
-ExpenseReport >> tags [
-	| tags |
-	tags := expenses collect: #tag.
-	tags removeDuplicates.
-	^ tags
-	
+ExpenseReport >> sum [
+	^ expenses sum: #cost
 ]
 
 { #category : #accessing }

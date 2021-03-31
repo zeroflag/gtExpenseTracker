@@ -3,15 +3,20 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'date',
-		'tag',
-		'cost'
+		'cost',
+		'category'
 	],
 	#category : #ExpenseTracking
 }
 
 { #category : #'instance creation' }
-Expense class >> date: aDate cost: aMoney tag: aString [ 
-	^ self new setDate: aDate tag: aString cost: aMoney
+Expense class >> date: aDate cost: aMoney category: aString [ 
+	^ self new setDate: aDate category: aString cost: aMoney
+]
+
+{ #category : #accessing }
+Expense >> category [
+	^ category
 ]
 
 { #category : #accessing }
@@ -30,19 +35,14 @@ Expense >> printOn: aStream [
 	aStream nextPutAll: ' at '.
 	date printOn: aStream.
 	aStream nextPutAll: ' for '.
-	tag printOn: aStream.
+	category printOn: aStream.
 	
 ]
 
 { #category : #initalize }
-Expense >> setDate: aDate tag: aString cost: aMoney [
+Expense >> setDate: aDate category: aString cost: aMoney [
 	date := aDate.
-	tag := aString.
+	category := aString.
 	cost := aMoney.
 	^ self
-]
-
-{ #category : #accessing }
-Expense >> tag [
-	^ tag
 ]
