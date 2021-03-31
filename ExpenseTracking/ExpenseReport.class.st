@@ -13,23 +13,56 @@ Class {
 ExpenseReport class >> fromCsv: aString [ 
 	| csv header lines expenses |
 	csv := CSVParser parseFile: aString.
+	
 	header := csv lines second values allButFirst collect: [:each | each value withoutQuoting].
-	lines := csv lines allButFirst: 4.
+	lines := csv lines allButFirst: 3.
+
+"	header := csv lines first values allButFirst collect: [:each | each value withoutQuoting].
+	lines := csv lines allButFirst: 1."
+	
 	expenses := OrderedCollection new.
 	lines do: [:line |		  	
-	  | date cell |
-  	date := Date fromString: line values first value.
+	  | date cell dateCol |
+	  dateCol := line values first value trim.
+	  dateCol ifNotEmpty: [ date := Date fromString: dateCol ].
   	line values allButFirst doWithIndex: [:each :index |
   		cell := each value trim.
   		cell ifNotEmpty: [ 
   			expenses add: (Expense
 				date: date
 				cost: each value asNumber
-				category: (header at: index) value)
+				category: (self translateCategory:((header at: index) value)))
   		].
  	 ].  
 	].
 	^ self new setHeader: header expenses: expenses
+]
+
+{ #category : #private }
+ExpenseReport class >> translateCategory: aString [
+	^ { 
+		'Gyorsétterem, rendelés' -> 'food delivery'.
+		'Bevásárlás (főzéshez, reggeli, víz)' -> 'groceries'.
+		'Víz' -> 'water'.
+		'Közös költség' -> 'common charges'.
+		'Áram' -> 'electricity'.
+		'Lakásbiztosítás' -> 'insurance'.
+		'Sportolás, edzés' -> 'sport'.
+		'Orvos, fogorvos' -> 'medical'.
+		'Szálláshely, üdülés' -> 'travel'.
+		'TV, internet, telefon (netflix)' -> 'subscriptions'.
+		'Nassolás (fagyi, csoki, chips, keksz)' -> 'snacks'.
+		'Egyéb lakhatás 1' -> 'maintenance'.
+		'Hobbi feleség' -> 'hobby'.
+		'Egyéb személyes kiadás 1' -> 'personal'.
+		'Egyéb kiadások (tr)' -> 'mental health'.
+	} asDictionary at: aString ifAbsent: [
+		(aString = 'Egyéb étel, ital 1' or: [aString = 'Egyéb étel, ital 2'])
+			ifTrue: [ 'groceries' ]
+			ifFalse: [ aString ]
+	]
+	
+ 
 ]
 
 { #category : #converting }
@@ -224,6 +257,7 @@ ExpenseReport >> gtViewMonthsOn: aView [
 				title: 'Month';
 				column: 'Month' text: #firstMonth;
 				column: 'Sum' text: #sum;
+				column: 'Average/Day' text: [:each | (each sum / each size) rounded ];
 				items: [ (1 to: self lastMonth) collect: [:i | self month: i] ]].
 ]
 
@@ -291,8 +325,7 @@ ExpenseReport >> gtViewTreeOn: aView [
 		column: 'Average' item: [:each |
 			(each isKindOf: ExpenseReport)
 				ifTrue: [ (each sum / each size) rounded ]
-				ifFalse: ['' asRopedText]];							
-		expandAll;
+				ifFalse: ['' asRopedText]];
 		children: [ :each |
 			(each isKindOf: ExpenseReport)
 				ifTrue: [each expenses]
@@ -327,6 +360,29 @@ ExpenseReport >> printOn: aStream [
 		nextPutAll: ': ';
 		nextPutAll: self sum asString. 
 	
+]
+
+{ #category : #accessing }
+ExpenseReport >> saveAs: path [
+	path asFileReference
+		createFile; 
+		writeStreamDo: [:stream |
+			self asTable do: [:row |
+				row do: [:col |
+					(col isKindOf: Date) 
+						ifTrue: [
+							stream 
+								nextPutAll: row first mmddyyyy;
+								nextPut: $,. ]
+						ifFalse: [
+							stream 
+								nextPutAll: (col ifNil: [''] ifNotNil: [col asString]);
+								nextPut: $,.	
+						].
+				].
+				stream crlf.
+			]
+		].
 ]
 
 { #category : #initalize }
