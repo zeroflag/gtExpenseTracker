@@ -65,7 +65,7 @@ ExpensePlot >> data: aCollection [
 { #category : #private }
 ExpensePlot >> dot: aPoint [
 	canvas fill
-		path: (canvas shape circleAt: aPoint radius: 5);
+		path: (canvas shape circleAt: aPoint radius: 3);
 		paint: lineColor;
 		draw. 
 ]
@@ -238,12 +238,12 @@ ExpensePlot >> plot [
 
 { #category : #private }
 ExpensePlot >> translateX: x [ 
-	^ (x - xmin) * width / (xmax - xmin) + x0.
+	^ [ (x - xmin) * width / (xmax - xmin) + x0 ] on: ZeroDivide do: [ x0 ]
 ]
 
 { #category : #private }
 ExpensePlot >> translateY: y [
-	^ y0 + height - (y * height / ymax) .
+	^ y0 + height - (y * height / ymax)
 ]
 
 { #category : #accessing }

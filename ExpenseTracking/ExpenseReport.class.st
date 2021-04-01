@@ -10,36 +10,54 @@ Class {
 }
 
 { #category : #'instance creation' }
-ExpenseReport class >> fromCsv: aString [ 
-	| csv header lines expenses |
-	csv := CSVParser parseFile: aString.
-	
-	header := csv lines second values allButFirst collect: [:each | each value withoutQuoting].
-	lines := csv lines allButFirst: 3.
+ExpenseReport class >> fromFile: path [
+	^ path asFileReference readStreamDo: [:stream | self fromString: stream contents ]
+]
 
-"	header := csv lines first values allButFirst collect: [:each | each value withoutQuoting].
-	lines := csv lines allButFirst: 1."
+{ #category : #'instance creation' }
+ExpenseReport class >> fromServer [
+	^ self fromUrl: 'http://192.168.0.10:8090/expense_2021.csv'.
+]
+
+{ #category : #'instance creation' }
+ExpenseReport class >> fromString: aString [ 
+	| csv header lines expenses |
+	csv := CSVParser parse: aString.
+	
+"	header := csv lines second values allButFirst collect: [:each | each value withoutQuoting].
+	lines := csv lines allButFirst: 3."
+	
+	header := csv lines first values allButFirst collect: [:each | each value withoutQuoting].
+	lines := csv lines allButFirst: 1.
 	
 	expenses := OrderedCollection new.
 	lines do: [:line |		  	
 	  | date cell dateCol |
 	  dateCol := line values first value trim.
-	  dateCol ifNotEmpty: [ date := Date fromString: dateCol ].
-  	line values allButFirst doWithIndex: [:each :index |
-  		cell := each value trim.
-  		cell ifNotEmpty: [ 
-  			expenses add: (Expense
-				date: date
-				cost: each value asNumber
-				category: (self translateCategory:((header at: index) value)))
-  		].
+	  dateCol ifNotEmpty: [
+	  	date := Date fromString: dateCol.
+  		line values allButFirst doWithIndex: [:each :index |
+  			cell := each value trim.
+  			cell ifNotEmpty: [ 
+  				expenses add: (Expense
+					date: date
+					cost: each value asNumber
+					category: (self translateCategory:(header at: index)))
+  			].
+ 	 	].
  	 ].  
 	].
 	^ self new setHeader: header expenses: expenses
 ]
 
+{ #category : #'instance creation' }
+ExpenseReport class >> fromUrl: aString [
+	^ self fromString: (ZnClient new get: aString).
+]
+
 { #category : #private }
 ExpenseReport class >> translateCategory: aString [
+	"^ aString."
 	^ { 
 		'Gyorsétterem, rendelés' -> 'food delivery'.
 		'Bevásárlás (főzéshez, reggeli, víz)' -> 'groceries'.
@@ -67,10 +85,9 @@ ExpenseReport class >> translateCategory: aString [
 
 { #category : #converting }
 ExpenseReport >> asTable [
-	| table queue tagToColumn tags |
+	| table queue tagToColumn tags index cost |
 	tags := self categories.
-	header := OrderedCollection with: '' withAll: tags.
-	table := OrderedCollection with: header.
+	table := OrderedCollection with: (OrderedCollection with: '' withAll: tags).
 	tagToColumn := Dictionary newFromKeys: tags andValues: (1 to: tags size).
 	
 	queue := OrderedCollection withAll: expenses.
@@ -78,10 +95,10 @@ ExpenseReport >> asTable [
 		| row date |
 		date := datetime asDate.
 		row := Array new: tags size.
-		[queue notEmpty and: [queue first date = date]] whileTrue: 
-		[ row 
-				at: (tagToColumn at: queue first category) 
-				put: queue first cost.
+		[queue notEmpty and: [queue first date = date]] whileTrue: [ 
+			index := tagToColumn at: queue first category.
+			cost := ((row at: index) ifNil: [ 0 ]) +  queue first cost.
+			row at: index put: cost.
 			queue removeFirst. ].
 		table add: (OrderedCollection with: date withAll: row).
 	].
@@ -127,8 +144,10 @@ ExpenseReport >> firstMonth [
 
 { #category : #grouping }
 ExpenseReport >> groupByCategory [
-    ^ (expenses groupedBy: #category) values collect: [:each |
-		self class new setHeader: header expenses: each ].
+	| groups |
+	groups := (expenses groupedBy: #category) values.
+    ^ (groups collect: [:each | self class new setHeader: header expenses: each ]) 
+    	sorted: [:a :b | a sum > b sum]
 ]
 
 { #category : #grouping }
@@ -257,7 +276,8 @@ ExpenseReport >> gtViewMonthsOn: aView [
 				title: 'Month';
 				column: 'Month' text: #firstMonth;
 				column: 'Sum' text: #sum;
-				column: 'Average/Day' text: [:each | (each sum / each size) rounded ];
+				column: 'Average/Day' text: [:each | 
+					(each sum / ((Month month:each firstMonth) daysInMonth)) rounded ];
 				items: [ (1 to: self lastMonth) collect: [:i | self month: i] ]].
 ]
 
@@ -370,15 +390,11 @@ ExpenseReport >> saveAs: path [
 			self asTable do: [:row |
 				row do: [:col |
 					(col isKindOf: Date) 
-						ifTrue: [
-							stream 
-								nextPutAll: row first mmddyyyy;
-								nextPut: $,. ]
+						ifTrue: [ stream nextPutAll: col mmddyyyy. ]
 						ifFalse: [
-							stream 
-								nextPutAll: (col ifNil: [''] ifNotNil: [col asString]);
-								nextPut: $,.	
+							col ifNotNil: [ stream nextPutAll: col asString ].	
 						].
+						stream nextPut: $,.
 				].
 				stream crlf.
 			]
@@ -387,7 +403,8 @@ ExpenseReport >> saveAs: path [
 
 { #category : #initalize }
 ExpenseReport >> setHeader: aCollection1 expenses: aCollection2 [
-    header := aCollection1.
+    header := (aCollection1 collect: [:each | self class translateCategory: each]).
+    header removeDuplicates.
 	expenses := aCollection2.
 ]
 
