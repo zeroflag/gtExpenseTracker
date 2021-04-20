@@ -22,7 +22,8 @@ Class {
 		'yTick',
 		'xTick',
 		'xs',
-		'ys'
+		'ys',
+		'font'
 	],
 	#category : #ExpenseTracking
 }
@@ -48,6 +49,18 @@ ExpensePlot >> budget: aNumber [
 ]
 
 { #category : #private }
+ExpensePlot >> cashLeft [
+	^ budget ifNil: [ 0 ] ifNotNil: [ budget - self spent ]
+]
+
+{ #category : #private }
+ExpensePlot >> cashPerDayLeft [
+	^ self daysLeft = 0
+		ifTrue: [ 0 ]
+		ifFalse: [ (self cashLeft / self daysLeft) rounded ]
+]
+
+{ #category : #private }
 ExpensePlot >> connect: point1 to: point2 [
 	canvas stroke
 		path: (canvas path moveTo: point1; lineTo: point2; finish);
@@ -63,6 +76,11 @@ ExpensePlot >> data: aCollection [
 ]
 
 { #category : #private }
+ExpensePlot >> daysLeft [
+	^ self lastDate month daysInMonth - self lastDate dayOfMonth
+]
+
+{ #category : #private }
 ExpensePlot >> dot: aPoint [
 	canvas fill
 		path: (canvas shape circleAt: aPoint radius: 3);
@@ -72,7 +90,7 @@ ExpensePlot >> dot: aPoint [
 
 { #category : #private }
 ExpensePlot >> drawAxis [
-	| axis font text metrics |
+	| axis text metrics |
 	axis := canvas path
 		moveTo: x0@(y0 + height);
 		lineTo: (x0+width)@(y0+height);
@@ -84,10 +102,7 @@ ExpensePlot >> drawAxis [
 		path: axis;
 		paint: axisColor;
 		width: 2;
-		draw.
-
-	font := canvas font size: 10; weightNormal; build.
-		
+		draw.		
 	0 to: ymax by: yTick do: [:i |
 		| tick |
 		tick := canvas path
@@ -153,31 +168,25 @@ ExpensePlot >> drawBudget [
 
 { #category : #private }
 ExpensePlot >> drawLabels [
-	| budgetLabel xLabel budgetMetrics xMetrics font |
-	font := canvas font
-		size: 12;
-		weightNormal;
-		build.
-									
+	| budgetLabel xLabel budgetMetrics xMetrics |
 	budgetLabel := canvas text
-		paint: axisColor;
-		string: ('Spent {1} out of {2}' format: {ys last . budget ifNil: ['N/A']});
+		paint: (self cashLeft < 0 ifTrue: [Color red] ifFalse: [Color green muchDarker]);
+		string: self summary;
 		font: font.
 	budgetMetrics := budgetLabel measure.
 	budgetLabel
-		baseline: (x0 + (width - budgetMetrics textMetrics width / 2.0))@(y0 - 5);
+		baseline: (x0 + ((width - budgetMetrics textMetrics width) / 2.0)) @ (y0 - 5);
 		draw.
-		
 	xLabel := canvas text
 		paint: axisColor;
 		string: 'Date';
 		font: font.
 	xMetrics := xLabel measure.
 	xLabel
-		baseline: (x0 + (width - xMetrics textMetrics width / 2.0))@(height + y0 + xMetrics textMetrics height + 3);
-		draw.
-		
-				
+		baseline:
+			(x0 + ((width - xMetrics textMetrics width) / 2.0))
+				@ (height + y0 + xMetrics textMetrics height + 3);
+		draw
 ]
 
 { #category : #private }
@@ -208,6 +217,11 @@ ExpensePlot >> initialize [
 
 ]
 
+{ #category : #private }
+ExpensePlot >> lastDate [
+	^ Date fromSeconds: xs last
+]
+
 { #category : #plot }
 ExpensePlot >> plot [
 	data ifEmpty: [ ^ (SkiaCanvas extent:0@0) asForm ].
@@ -223,7 +237,7 @@ ExpensePlot >> plot [
 	budget ifNotNil: [ymax := ymax max: budget].			
 			
 	canvas := SkiaCanvas extent: (width + (2*x0))@(height+(2*y0)).
-					
+	font := canvas font size: 12; weightNormal; build.						
 	self drawBackground.
 	self drawAxis.	
 	self drawLabels.
@@ -234,6 +248,31 @@ ExpensePlot >> plot [
 		flush;
 		asForm
 
+]
+
+{ #category : #private }
+ExpensePlot >> spent [
+	^ ys ifEmpty: [ 0 ] ifNotEmpty: [ ys last ]
+]
+
+{ #category : #private }
+ExpensePlot >> summary [
+	^ budget
+		ifNil: [ 'Spent {1}' format: {self spent} ]
+		ifNotNil:[ self summaryWithBudget ]
+]
+
+{ #category : #private }
+ExpensePlot >> summaryWithBudget [
+	^ 'Spent {1} out of {2}. {3}' format:{
+		self spent.
+		budget.
+		(self cashLeft < 0
+			ifTrue: [ 'Overspent {1}.' format: {self cashLeft abs} ]
+			ifFalse: [ '{1} left, {2}/day.' format: {
+				self cashLeft.
+				self cashPerDayLeft
+			} ])}
 ]
 
 { #category : #private }
