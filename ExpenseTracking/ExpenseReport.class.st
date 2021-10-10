@@ -23,10 +23,6 @@ ExpenseReport class >> fromServer [
 ExpenseReport class >> fromString: aString [ 
 	| csv header lines expenses |
 	csv := CSVParser parse: aString.
-	
-"	header := csv lines second values allButFirst collect: [:each | each value withoutQuoting].
-	lines := csv lines allButFirst: 3."
-	
 	header := csv lines first values allButFirst collect: [:each | each value withoutQuoting].
 	lines := csv lines allButFirst: 1.
 	
@@ -57,28 +53,7 @@ ExpenseReport class >> fromUrl: aString [
 
 { #category : #private }
 ExpenseReport class >> translateCategory: aString [
-	"^ aString."
-	^ { 
-		'Gyorsétterem, rendelés' -> 'food delivery'.
-		'Bevásárlás (főzéshez, reggeli, víz)' -> 'groceries'.
-		'Víz' -> 'water'.
-		'Közös költség' -> 'common charges'.
-		'Áram' -> 'electricity'.
-		'Lakásbiztosítás' -> 'insurance'.
-		'Sportolás, edzés' -> 'sport'.
-		'Orvos, fogorvos' -> 'medical'.
-		'Szálláshely, üdülés' -> 'travel'.
-		'TV, internet, telefon (netflix)' -> 'subscriptions'.
-		'Nassolás (fagyi, csoki, chips, keksz)' -> 'snacks'.
-		'Egyéb lakhatás 1' -> 'maintenance'.
-		'Hobbi feleség' -> 'hobby'.
-		'Egyéb személyes kiadás 1' -> 'personal'.
-		'Egyéb kiadások (tr)' -> 'mental health'.
-	} asDictionary at: aString ifAbsent: [
-		(aString = 'Egyéb étel, ital 1' or: [aString = 'Egyéb étel, ital 2'])
-			ifTrue: [ 'groceries' ]
-			ifFalse: [ aString ]
-	]
+	^ aString.
 	
  
 ]
