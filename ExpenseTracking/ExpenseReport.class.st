@@ -398,6 +398,16 @@ ExpenseReport >> timeSpan [
 	^ expenses first date to: expenses last date
 ]
 
+{ #category : #accessing }
+ExpenseReport >> totalFood [
+	^ (self category: 'groceries') sum + (self category: 'food delivery') sum
+]
+
+{ #category : #accessing }
+ExpenseReport >> totalHousingExpense [
+	^ (self category: 'common charges') sum + (self category: 'water') sum + (self category: 'electricity') sum
+]
+
 { #category : #filtering }
 ExpenseReport >> year: aNumber1 month: aNumber2 [
 	| report |
