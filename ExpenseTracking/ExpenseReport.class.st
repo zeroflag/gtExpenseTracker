@@ -58,6 +58,11 @@ ExpenseReport class >> translateCategory: aString [
  
 ]
 
+{ #category : #inspect }
+ExpenseReport >> allMonths [
+	^ (1 to: self lastMonth) collect: [ :i | self month: i ]
+]
+
 { #category : #converting }
 ExpenseReport >> asTable [
 	| table queue tagToColumn tags index cost |
@@ -245,15 +250,15 @@ ExpenseReport >> gtViewMonthsOn: aView [
 	<gtView>
 	^ self firstMonth = self lastMonth
 		ifTrue: [ aView empty ]
-		ifFalse: [ 
-			aView columnedList
+		ifFalse: [ aView columnedList
 				priority: 6;
 				title: 'Month';
 				column: 'Month' text: #firstMonth;
 				column: 'Sum' text: #sum;
-				column: 'Average/Day' text: [:each | 
-					(each sum / ((Month month:each firstMonth) daysInMonth)) rounded ];
-				items: [ (1 to: self lastMonth) collect: [:i | self month: i] ]].
+				column: 'Average/Day'
+					text:
+						[ :each | (each sum / (Month month: each firstMonth) daysInMonth) rounded ];
+				items: [ self allMonths ] ]
 ]
 
 { #category : #inspect }
@@ -390,7 +395,7 @@ ExpenseReport >> size [
 
 { #category : #accessing }
 ExpenseReport >> sum [
-	^ expenses sum: #cost
+	^ expenses ifEmpty: [ 0 ] ifNotEmpty: [ expenses sum: #cost ]
 ]
 
 { #category : #accessing }
