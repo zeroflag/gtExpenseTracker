@@ -16,7 +16,7 @@ ExpenseReport class >> fromFile: path [
 
 { #category : #'instance creation' }
 ExpenseReport class >> fromServer [
-	^ self fromUrl: 'http://192.168.0.10:8090/expense_2021.csv'.
+	^ self fromUrl: 'http://192.168.0.10:8090/expense_2022.csv'.
 ]
 
 { #category : #'instance creation' }
@@ -59,8 +59,8 @@ ExpenseReport class >> translateCategory: aString [
 ]
 
 { #category : #inspect }
-ExpenseReport >> allMonths [
-	^ (1 to: self lastMonth) collect: [ :i | self month: i ]
+ExpenseReport >> allMonths: year [
+	^ (1 to: self lastMonth) collect: [ :i | self year: year month: i ]
 ]
 
 { #category : #converting }
@@ -258,7 +258,7 @@ ExpenseReport >> gtViewMonthsOn: aView [
 				column: 'Average/Day'
 					text:
 						[ :each | (each sum / (Month month: each firstMonth) daysInMonth) rounded ];
-				items: [ self allMonths ] ]
+				items: [ self allMonths: expenses first date year ] ] "XXX"
 ]
 
 { #category : #inspect }
@@ -343,11 +343,6 @@ ExpenseReport >> lastMonth [
 	^ expenses last date monthIndex
 ]
 
-{ #category : #filtering }
-ExpenseReport >> month: aNumber [
-	^ self year: (Date today year) month: aNumber.
-]
-
 { #category : #accessing }
 ExpenseReport >> printOn: aStream [
 	| start stop |
@@ -404,13 +399,30 @@ ExpenseReport >> timeSpan [
 ]
 
 { #category : #accessing }
+ExpenseReport >> totalEntertainment [
+	^ (self category: 'entertainment') sum 
+	+ (self category: 'travel') sum
+]
+
+{ #category : #accessing }
 ExpenseReport >> totalFood [
-	^ (self category: 'groceries') sum + (self category: 'food delivery') sum
+	^ (self category: 'groceries') sum 
+	+ (self category: 'food delivery') sum
+	+ (self category: 'snacks') sum
 ]
 
 { #category : #accessing }
 ExpenseReport >> totalHousingExpense [
-	^ (self category: 'common charges') sum + (self category: 'water') sum + (self category: 'electricity') sum
+	^ (self category: 'common charges') sum 
+	+ (self category: 'water') sum 
+	+ (self category: 'electricity') sum
+	+ (self category: 'insurance') sum
+]
+
+{ #category : #accessing }
+ExpenseReport >> totalMedical [
+	^ (self category: 'medical') sum 
+	+ (self category: 'mental health') sum
 ]
 
 { #category : #filtering }
