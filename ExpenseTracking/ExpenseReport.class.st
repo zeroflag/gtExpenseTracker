@@ -344,6 +344,17 @@ ExpenseReport >> lastMonth [
 ]
 
 { #category : #accessing }
+ExpenseReport >> month: aNumber [
+	^ self year: Date today year month: aNumber
+
+]
+
+{ #category : #accessing }
+ExpenseReport >> monthlyAverage: categories [
+	^ ((categories collect: [:each | (self category: each) sum ]) sum / (self lastMonth - self firstMonth +1)) rounded
+]
+
+{ #category : #accessing }
 ExpenseReport >> printOn: aStream [
 	| start stop |
 	start := expenses first date month name.
@@ -391,6 +402,21 @@ ExpenseReport >> size [
 { #category : #accessing }
 ExpenseReport >> sum [
 	^ expenses ifEmpty: [ 0 ] ifNotEmpty: [ expenses sum: #cost ]
+]
+
+{ #category : #accessing }
+ExpenseReport >> summary [
+	^ {
+	    #totalFood ->       	(self monthlyAverage: #('food delivery' 'groceries' 'snacks')).
+	    #foodDelivery ->    	(self monthlyAverage: #('food delivery')).
+	    #totalHousing ->        (self monthlyAverage: #('common charges' 'water' 'electricity' 'insurance')).
+	    #maintenance ->     	(self monthlyAverage: #('maintenance')).
+	    #publicTransport -> 	(self monthlyAverage: #('public transport')).
+	    #sport ->           	(self monthlyAverage: #('sport')).
+        #totalMedical ->        (self monthlyAverage: #('medical' 'mental health')).
+	    #totalEntertainment ->  (self monthlyAverage: #('entertainment' 'travel')).
+	    #all -> (((self firstMonth to: self lastMonth) collect: [:i |  ((self month: i) ) sum ]) average rounded).
+	}
 ]
 
 { #category : #accessing }
