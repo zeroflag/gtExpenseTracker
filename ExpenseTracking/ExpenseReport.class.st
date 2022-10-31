@@ -117,7 +117,7 @@ ExpenseReport >> filter: aBloc [
 		expenses: (expenses select: aBloc)
 ]
 
-{ #category : #accessing }
+{ #category : #inspect }
 ExpenseReport >> firstMonth [
 	^ expenses first date monthIndex	
 ]
@@ -259,6 +259,17 @@ ExpenseReport >> gtViewMonthsOn: aView [
 					text:
 						[ :each | (each sum / (Month month: each firstMonth) daysInMonth) rounded ];
 				items: [ self allMonths: expenses first date year ] ] "XXX"
+]
+
+{ #category : #accessing }
+ExpenseReport >> gtViewSummaryOn: aView [
+	<gtView>
+	^ aView columnedList
+		title: 'Summary';
+		priority: 6;
+		items: [self summary];
+		column: 'Month' text: #key;
+		column: 'Cost' text: #value.
 ]
 
 { #category : #inspect }
@@ -455,7 +466,7 @@ ExpenseReport >> totalMedical [
 ExpenseReport >> year: aNumber1 month: aNumber2 [
 	| report |
 	report := self filter: [:each | each date year = aNumber1 and: [each date month index = aNumber2]].
-	report budget: 300000.
+	report budget: 400000.
 	^ report
 
 ]
