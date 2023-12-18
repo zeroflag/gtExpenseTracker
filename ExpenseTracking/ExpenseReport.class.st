@@ -16,7 +16,7 @@ ExpenseReport class >> fromFile: path [
 
 { #category : #'instance creation' }
 ExpenseReport class >> fromServer [
-	^ self fromUrl: 'http://192.168.0.10:8090/expense_2022.csv'.
+	^ self fromUrl: 'http://192.168.0.10:8090/expense_2023.csv'.
 ]
 
 { #category : #'instance creation' }
